@@ -1,3 +1,5 @@
+# Test file for triangularization algorithm
+
 import unittest
 import numpy as np
 from numpy.testing import assert_allclose
@@ -9,18 +11,20 @@ import trig
 class TestTrigFunctions(unittest.TestCase):
     
     def setUp(self):
-        # Common test data
+        # Super basic test data
         self.sensor_positions = [
             [0.0, 0.0],
             [100.0, 0.0],
             [0.0, 100.0],
             [100.0, 100.0]
         ]
+        # True source location and emmission time
         self.true_source = np.array([50.0, 50.0])
         self.true_t0 = 0.0
+        # Speed of sound in air (m/s)
         self.speed_of_sound = 343.0
         
-        # Generate ideal TOAs
+        # Generate ideal TOAs based on the sensor positions and true source
         self.toas = []
         for sensor in self.sensor_positions:
             distance = np.linalg.norm(self.true_source - np.array(sensor))
@@ -30,8 +34,8 @@ class TestTrigFunctions(unittest.TestCase):
     
     def test_corrected_objective_function(self):
         """Test objective function."""
-        # Test with known values
-        theta = [50.0, 50.0, 0.0]  # True source position and time
+        # [x0, y0, t0] = location coordinates, emission time
+        theta = [50.0, 50.0, 0.0]
         result = trig.objective(theta, self.sensor_positions, self.toas, self.speed_of_sound)
         # Should be very close to zero since these are the true values
         self.assertAlmostEqual(result, 0.0, places=10)
@@ -53,7 +57,7 @@ class TestTrigFunctions(unittest.TestCase):
         """Test localization with noisy data."""
 
         # Add noise to TOAs
-        np.random.seed(42)  # For reproducibility
+        np.random.seed(42)
         noise_std = 0.01
         toas_noisy = np.array(self.toas) + np.random.normal(0, noise_std, len(self.toas))
         
@@ -64,7 +68,7 @@ class TestTrigFunctions(unittest.TestCase):
         
         print("Estimated Source:", estimated_source)
 
-        # Check results - allowing more tolerance due to noise
+        # Check results (more tolerance because of noise)
         assert_allclose(estimated_source, self.true_source, rtol=1e-1, atol=1e-1)
         self.assertAlmostEqual(estimated_t0, self.true_t0, places=1)
             
@@ -72,11 +76,11 @@ class TestTrigFunctions(unittest.TestCase):
     def test_minimum_sensors_required(self):
         """Test that at least 3 sensors are required for 2D localization"""
 
-        # Try with only 2 sensors (insufficient)
+        # Try with only 2 sensors (going to be bad)
         insufficient_sensors = self.sensor_positions[:2]
         insufficient_toas = self.toas[:2]
         
-        # This should still run but might give poor results
+        # Should still run, but bad results
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             estimated_source, estimated_t0, result = localize_gunshot(
@@ -85,8 +89,7 @@ class TestTrigFunctions(unittest.TestCase):
         
         print("Estimated Source with insufficient sensors:", estimated_source)
         
-        
-        # Check if optimization was successful but possibly inaccurate
+        # Check if optimization was successful (might not be accurate though)
         self.assertTrue(hasattr(result, 'success'))
 
 
